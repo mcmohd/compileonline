@@ -1,0 +1,76 @@
+<body>
+<div class="easyui-panel" id="signup" style="width:100%; height:400px;">
+<div style="padding:10px 60px 20px 60px">
+<div id="message">
+<div style="text-align:center;padding:5px;">
+<p><img src="/images/mini-logo.png"  style="width:60px; height:60px"/></p>
+<div id="tag" style="visibility:hidden"><h2>One moment please...</h2></div>
+</div>
+<form id="shareform" method="post" enctype="multipart/form-data">
+<table cellpadding="5">
+<tr>
+<td>
+<h1 style="text-align:center;">Disclaimer</h1>
+<p>You agree to share this work publicly and make sure it does not contain any profane, harmful, or any other illegal content.</p>
+</td>
+</tr>
+</table>
+<div style="text-align:center;padding:5px">
+<a href="javascript:void(0)" class="easyui-linkbutton" onclick="shareProject()" style="width:160px"> Yes, I Agree </a>
+<a href="javascript:void(0)" class="easyui-linkbutton" onclick="closeSign()" style="width:160px"> Cancel </a>
+</div>
+</form>
+</div>
+<div id="loading" class="loading" style="visibility:hidden"></div>
+</div>
+<script>
+function shareProject(){
+   var url = "share_project";
+   var inputs = JSON.stringify({"hello":"bye"});
+   $.ajax({
+      type: "POST",
+      url: url,
+      data: inputs,
+      cache:false,
+      contentType: 'application/json; charset=utf-8',
+      dataType: 'json',
+      evalScripts:true,
+      beforeSend: function(  ) {
+         $(".loading").css({"visibility":"visible"});
+         $("#tag").css({"visibility":"visible"});
+         $("#shareform").css({"visibility":"hidden"});
+      },
+      success:function(data){
+         var text = data.responseText;
+         $('#message').html(text);
+         $(".loading").css({"visibility":"hidden"});
+         $("#tag").css({"visibility":"hidden"});
+         if (window.addthis){
+           window.addthis = null;
+           window._adr = null;
+           window._atc = null;
+           window._atd = null;
+           window._ate = null;
+           window._atr = null;
+           window._atw = null;
+         }
+      },
+      error:function(data){
+         var text = data.responseText;
+         $('#message').html('<div>' + text + '</div>');
+         $(".loading").css({"visibility":"hidden"});
+         $("#tag").css({"visibility":"hidden"});
+         if (window.addthis){
+           window.addthis = null;
+           window._adr = null;
+           window._atc = null;
+           window._atd = null;
+           window._ate = null;
+           window._atr = null;
+           window._atw = null;
+         }
+      }
+   });
+}
+</script>
+</body>
