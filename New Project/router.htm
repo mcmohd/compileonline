@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script src="/scripts/jquery.min.js"></script>
+<link rel="stylesheet" type="text/css" href="/style/col.css">
+</head>
+<body>
+<center><img src="/images/mini-logo.png"/></center>
+<div id="tag"><h2>One moment please...</h2></div>
+<div id="message"></div>
+<form id="form" method="GET">
+<input type="hidden" id="code" name="code" value=''/>
+<input type="hidden" id="state" name="state" value=''/>
+</form>
+<center>
+<div id="wait"></div>
+</center>
+<script>
+   var code = getParameterByName ('code' );
+   var state = getParameterByName ('state' );
+   var mode = getParameterByName ('mode' );
+   if( mode == 1 ){
+       $("#form").attr("action", "save_at_dropbox_handler");
+       $("#tag").html('<h2>Your project is being saved...</h2>');
+   }else if( mode == 2 ){
+       $("#form").attr("action", "list_dropbox_projects_handler");
+       $("#tag").html('<h2>One moment please...</h2>');
+   }else if( mode == 3 ){
+       $("#form").attr("action", "import_dropbox_project_handler");
+       $("#tag").html('<h2>One moment please...Your project is being downloaded</h2>');
+   }else if( mode == 4 ){
+       $("#form").attr("action", "delete_dropbox_project_handler");
+       $("#tag").html('<h2>One moment please...</h2>');
+   }else if( mode == 101 ){
+       $("#form").attr("action", "save_at_googledrive_handler");
+       $("#tag").html('<h2>Your project is being saved...</h2>');
+   }else if( mode == 102 ){
+       $("#form").attr("action", "list_googledrive_projects_handler");
+       $("#tag").html('<h2>One moment please...</h2>');
+   }else if( mode == 103 ){
+       $("#form").attr("action", "import_googledrive_project_handler");
+       $("#tag").html('<h2>One moment please...Your project is being downloaded</h2>');
+   }else if( mode == 104 ){
+       $("#form").attr("action", "delete_googledrive_project_handler");
+       $("#tag").html('<h2>One moment please...</h2>');
+   }else if( mode == 201 ){
+       $("#form").attr("action", "save_at_onedrive_handler");
+       $("#tag").html('<h2>Your project is being saved...</h2>');
+   }else if( mode == 202 ){
+       $("#form").attr("action", "list_onedrive_projects_handler");
+       $("#tag").html('<h2>One moment please...</h2>');
+   }else if( mode == 203 ){
+       $("#form").attr("action", "import_onedrive_project_handler");
+       $("#tag").html('<h2>One moment please...Your project is being downloaded</h2>');
+   }else if( mode == 204 ){
+       $("#form").attr("action", "delete_onedrive_project_handler");
+       $("#tag").html('<h2>One moment please...</h2>');
+  }else if( mode == 301 ){
+       $("#form").attr("action", "save_at_github_handler");
+       $("#tag").html('<h2>Your project is being saved...</h2>');
+   }
+   $('#code').val(code);
+   $('#state').val(state);
+   $('#form').submit();
+   $("#wait").css({"visibility":"visible"});
+   function getParameterByName(name) {
+       var match = RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
+       return match && decodeURIComponent(match[1].replace(/\+/g, ' '));
+   }
+</script>
+</body>
+</html>
