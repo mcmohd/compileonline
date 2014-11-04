@@ -1,0 +1,28 @@
+<div class="easyui-panel" style="width:100%">
+<div style="padding:10px 60px 20px 60px">
+<div style="text-align:center;padding:5px">
+<p><img src="images/mini-logo.png"/></p>
+</div>
+<form id="loginform" method="post" data-options="url:'login'" enctype="multipart/form-data">
+<table cellpadding="5">
+<tr>
+<td>Login ID:</td>
+<td><input class="easyui-textbox" type="text" id="loginid" data-options="required:false" style="width:275px"></input></td>
+</tr>
+<tr>
+<td>Password:</td>
+<td><input class="easyui-textbox" type="password" id="password" data-options="required:false" style="width:275px"></input></td>
+<table cellpadding="5" style="width:350px;">
+<tr>
+<td><input type="checkbox" id="remember" checked="checked"> <span>Remember me</span></td>
+<td style="text-align:right;"><a href="javascript:void(0)" class="easyui-linkbutton" onclick="Login()" style="width:60px"> Sign In </a></td>
+</tr>
+</table>
+</form>
+<br>
+<div style="text-align:center;padding:5px">
+<p>If you <a href="forgotpassword.htm" rel="nofollow" target="_blank">Forgot Password</a>, otherwise you can <a href="signup.htm" rel="nofollow" target="_blank">Join Us</a> right now!</p>
+</div>
+<div id="gitloading" style="visibility:hidden"></div>
+</div>
+
