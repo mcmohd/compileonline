@@ -1,0 +1,1 @@
+{"id":"c","ext":"c","version":"GNU GCC Version 4.8.1","compile":"gcc -o main *.c","execute":"main","file":"/home/col/src/samples/main.c","mode":"c_cpp"}
