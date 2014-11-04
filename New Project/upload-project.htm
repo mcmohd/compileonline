@@ -1,0 +1,53 @@
+<style scoped>
+.f1{
+width:400px;
+}
+</style>
+<div class="easyui-panel" style="width:100%">
+<div style="padding:10px 60px 20px 60px">
+<div style="text-align:center;padding:5px">
+<p><img src="/images/file-upload.png"  style="width:60px; height:60px"/></p>
+<h2>Warning!!!!!</h2>
+<p>Uploading an old project will erase your exiting project at compileonline, still you want to continue,</p>
+<p>select tar.gz file which you had downloaded from compileonline using <b>Download Project</b> option</p>
+</div>
+<form id="uploadprojectform" method="post" data-options="url:'upload_project'" enctype="multipart/form-data">
+  <table style="width:100%; text-align: center">
+   <tr style="text-align:center;height:100px;">
+   <td>Project File:</td>
+   <td><input name="file" id="file" class="f1 easyui-filebox"></input></td>
+   </tr>
+   </table>
+</form>
+<div style="text-align:center;padding:5px">
+    <a href="javascript:void(0)" class="easyui-linkbutton" onclick="uploadProject()" style="width:60px"> Upload </a>
+    <a href="javascript:void(0)" class="easyui-linkbutton" onclick="closeSign()" style="width:60px"> Cancel </a>
+</div>
+<br>
+</div>
+<script>
+function uploadProject(){
+   $('#uploadprojectform').form('submit', {
+          onSubmit: function(){
+               var $file = $(this).find("input[type=file]");
+               if (!$file.val() || $file.val() == "") {
+                  $.messager.alert('Alert Message','No project file is selected to be uploaded!', 'info');
+                  return false;
+               }
+               $('#sign').window('close');
+               $("#loading").css({"visibility":"visible"});
+         },
+         success: function(data)
+         {
+             var obj = JSON.parse( data );
+             if( obj.status ){
+                $.messager.alert('Error Message', obj.message, 'error');
+             }else{
+                $.messager.alert('Success Message', obj.message, 'info');
+                reloadTree();
+             }
+             $("#loading").css({"visibility":"hidden"});
+         }
+    });
+}
+</script>
