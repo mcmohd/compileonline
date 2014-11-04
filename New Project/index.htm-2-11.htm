@@ -1,0 +1,1672 @@
+<!DOCTYPE html>  
+<html>  
+<head>  
+<meta charset="UTF-8">  
+<title>COMPILE ONLINE - Real Cloud Experience</title>
+<link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
+<meta name="Description" content="COMPILE ONLINE - Real Cloud Experience, you can compile and run, execute your source code related to Java, JSP, Cold Fusion, C, C++, Pascal, Fortran, PHP, Perl, Ruby and Python programs onnline using your browsers, iPhone, iPad or any other online device like smart TV using this virtual Linux / Unix  Server." />
+<meta name="Keywords" content="Unix, Web, Compile, Run, Java, C, C++, GO, PHP, Perl, Ruby and Python Programs" />
+<script src="/scripts/jquery.min.js"></script>
+<script src="/scripts/jquery.easyui.min.js"></script>
+<script src="/ace/src-min/ace.js" type="text/javascript" charset="utf-8"></script>
+<script src="/ace/src-min/keybinding-vim.js"></script>
+<script src="/ace/src-min/keybinding-emacs.js"></script>
+<script src="/scripts/spectrum.js"></script>
+<link rel="stylesheet" type="text/css" href="/themes/gray/easyui.css">
+<link rel="stylesheet" type="text/css" href="/themes/icon.css">
+<link rel="stylesheet" type="text/css" href="/style/spectrum.css">
+<link rel="stylesheet" type="text/css" href="/style/col.css">
+<script type="text/javascript">
+// Global variables
+var addthis_config = addthis_config||{};
+addthis_config.data_track_addressbar = false;
+addthis_config.data_track_clickback = false;
+var HOME = "http://www.compileonline.com";
+var editors = {};
+var editor_theme = "crimson_editor";
+var editor_font_size = 14;
+var editor_invisible = false;
+var editor_gutter = true;
+var editor_tab_size = 4;
+var editor_type = "null";
+var editor_soft_wrap = "false";
+var projecttitle = "New Project";
+var loginstatus = false;
+var terminal_color = '#084d11';
+var terminal_mode = 'H';  // H for horizontal
+var port = 8081;
+var root;
+var languageid;
+var ext;
+var mainfile;
+var mainmode;
+var cmd_execute;
+var cmd_compile;
+var $win = null;
+var term = null;
+
+$(window).load(function () {
+   // Make Ajax call to login this user.
+   var url = "init";
+   var inputs = JSON.stringify({'hello': 'bye'});
+   $.ajax({
+      type: "GET",
+      url: url,
+      data: inputs,
+      contentType: 'application/json; charset=utf-8',
+      dataType: 'json',
+      beforeSend: function(  ) {
+         $("#loading").css({"visibility":"visible"});
+      },
+      success:function(data)
+      {
+         port = data.port;
+         root = data.root;
+         ext = data.ext;
+         languageid = data.languageid;
+         mainfile = data.mainfile;
+         mainmode = data.mainmode;
+         addNewTab(root, mainfile, null, mainmode);
+         setProjectTitle( data.projecttitle );
+      }
+   });
+   if( getCookie( "editor_theme" ) ){
+      editor_theme = getCookie( "editor_theme" );
+   }
+
+   if( getCookie( "editor_type" ) ){
+      editor_type = getCookie( "editor_type" );
+   }
+
+   if( getCookie( "editor_font_size" ) ){
+      editor_font_size = parseInt(getCookie( "editor_font_size" ));
+      setEditorFontSize( editor_font_size );
+   }
+   if( getCookie( "editor_soft_wrap" ) ){
+      editor_soft_wrap = getCookie( "editor_soft_wrap" );
+   }
+   if( getCookie( "editor_tab_size" ) ){
+      editor_tab_size = parseInt(getCookie( "editor_tab_size" ));
+   }
+
+   if( getCookie( "editor_invisible" ) && getCookie( "editor_invisible" ) !== 'false' ){
+      editor_invisible = getCookie( "editor_invisible" );
+   }
+   if( getCookie( "editor_gutter" ) && getCookie( "editor_gutter" ) !== 'false' ){
+      editor_gutter = getCookie( "editor_gutter" );
+   }
+   if( getCookie( "terminal_color" ) ){
+      terminal_color = getCookie( "terminal_color" );
+   }
+});
+window.onbeforeunload = function(e){
+   saveFiles( function( status ){ return true; });
+}
+</script>
+<script src="http://www.google-analytics.com/urchin.js" type="text/javascript">
+</script>
+<script type="text/javascript">
+_uacct = "UA-32077377-1";
+urchinTracker();
+</script>
+</head>
+<body class="easyui-layout" id="cc">
+<div id="loading"></div>
+<form id="ff">
+<div id="sign" class="easyui-window" title="Compile On Line" data-options="iconCls:'icon-login',modal:true, maximizable:false, closed:true, minimizable:false" style="width:530px;height:475px;padding:10px;"></div>
+<div id="dircontext" class="easyui-menu" style="width:150px;">
+   <div onclick="newFile()" data-options="iconCls:'icon-add-file'">Create File</div>
+   <div onclick="openFileUpload()" data-options="iconCls:'icon-upload-file'">Upload File</div>
+   <div onclick="newDir()" data-options="iconCls:'icon-add-dir'">New Directory</div>
+   <div onclick="deleteDir()" data-options="iconCls:'icon-delete-file'">Delete Directory</div>
+   <div onclick="renameFile()" data-options="iconCls:'icon-rename-file'">Rename Directory</div>
+   <div onclick="reloadTree()" data-options="iconCls:'icon-refresh-project'">Refresh Files</div>
+</div>
+<div id="filecontext" class="easyui-menu" style="width:150px;">
+   <div onclick="loadFile(false, false)" >Open File</div>
+   <div onclick="deleteFile()" data-options="iconCls:'icon-delete-file'">Delete File</div>
+   <div onclick="renameFile()" data-options="iconCls:'icon-rename-file'">Rename File</div>
+   <div onclick="downloadFile()" data-options="iconCls:'icon-download-file'">Download File</div>
+   <div onclick="reloadTree()" data-options="iconCls:'icon-refresh-project'">Refresh Files</div>
+</div>
+<iframe id="download" style="display:hidden"></iframe>
+<div data-options="region:'north'" style="height:50px; background:url(/images/top_bg.png) repeat-x !important;"><!--HEADER STARTS -->
+ <div class="easyui-panel,border:false,doSize:false" style="padding:5px;">
+   <a href=""><img src="http://www.compileonline.com/images/col.png" style="height:30px;margin-left:5px;border:0px;"/></a> <span id="version"> - GCC GNU 4.8.1</span>
+   <a id="help" href="#" class="easyui-linkbutton" data-options="iconCls:'icon-help', plain:true" style="float:right">Help</a>
+   <a id="view" href="#" class="easyui-menubutton" data-options="menu:'#mm3',iconCls:'icon-view'" style="float:right">View</a>
+   <a id="edit" href="#" class="easyui-menubutton" data-options="menu:'#mm2',iconCls:'icon-edit'" style="float:right">Edit</a>
+   <a id="project" href="#" class="easyui-menubutton" data-options="menu:'#mm4', plain:true, iconCls:'icon-project'" style="float:right">Project</a>
+   <a id="edit" href="#" class="easyui-menubutton" data-options="menu:'#mm1', iconCls:'icon-file'" style="float:right">File</a>
+   <a id="system" href="#" class="easyui-menubutton" data-options="menu:'#mm5', plain:true,iconCls:'icon-compileonline'" style="float:right">System</a>
+</div>
+<div id="mm5" style="width:100px;">
+   <div id="about" data-options="plain:true, iconCls:'icon-about'">About</div>
+   <div onclick="shutDown()" data-options="plain:true, iconCls:'icon-exit'">Shut Down</div>
+</div>
+<div id="mm1" style="width:200px;">
+   <div onclick="newFile()" data-options="iconCls:'icon-add-file'">Create File</div>
+   <div onclick="deleteFile()" data-options="iconCls:'icon-delete-file'">Delete File</div>
+   <div onclick="renameFile()" data-options="iconCls:'icon-rename-file'">Rename File</div>
+   <div onclick="downloadFile()" data-options="iconCls:'icon-download-file'">Download File</div>
+   <div onclick="openFileUpload()" data-options="iconCls:'icon-upload-file'">Upload File</div>
+   <div class="menu-sep"></div>
+   <div onclick="newDir()" data-options="iconCls:'icon-add-dir'">New Directory</div>
+   <div onclick="deleteDir()" data-options="iconCls:'icon-delete-file'">Delete Directory</div>
+   <div onclick="renameFile()" data-options="iconCls:'icon-rename-file'">Rename Directory</div>
+<!--
+   <div class="menu-sep"></div>
+   <div data-options="iconCls:'icon-print-file'">Print File</div>
+-->
+</div>
+<div id="mm2" style="width:200px;">
+   <div id="undo" data-options="iconCls:'icon-undo'">Undo</div>
+   <div id="redo" data-options="iconCls:'icon-redo'">Redo</div>
+   <div class="menu-sep"></div>
+   <div id="cut" data-options="iconCls:'icon-cut'">Cut</div>
+   <div id="copy" data-options="iconCls:'icon-copy'">Copy</div>
+   <div id="paste" data-options="iconCls:'icon-paste'">Paste</div>
+   <div id="delete" data-options="iconCls:'icon-delete'">Delete</div>
+   <div id="select" data-options="iconCls:'icon-select'">Select All</div>
+   <div class="menu-sep"></div>
+   <div id="find" data-options="iconCls:'icon-find'">Find</div>
+   <div id="findreplace" data-options="iconCls:'icon-replace'">Find and Replace</div>
+</div>
+<div id="mm3" style="width:200px;">
+   <div id="terminal-mode" data-options="iconCls:'icon-terminal'"><span>Terminal Mode</span>
+          <div>
+                <div onclick="setTerminalMode('H');" data-options="iconCls:'icon-h-terminal'">Horizontal</div>
+                <div onclick="setTerminalMode('V');" data-options="iconCls:'icon-v-terminal'">Vertical</div>
+         </div>
+   </div>
+   <div id="editor-type" data-options="iconCls:'icon-editor-type'"><span>Editor Type</span>
+          <div>
+                <div onclick="setEditorType('ace');">Ace</div>
+                <div onclick="setEditorType('vim');">Vim</div>
+                <div onclick="setEditorType('emacs');">Emacs</div>
+         </div>
+   </div>
+   <div id="editor-theme" data-options="iconCls:'icon-editor-theme'"><span>Editor Theme</span>
+           <div>
+                <div onclick="setEditorTheme('chrome');">Chrome</div>
+                <div onclick="setEditorTheme('crimson_editor');">Crimson Editor</div>
+                <div onclick="setEditorTheme('dreamweaver');">Dreamweaver</div>
+                <div onclick="setEditorTheme('eclipse');">Eclipse</div>
+                <div onclick="setEditorTheme('github');">Github</div>
+                <div onclick="setEditorTheme('kuroir');">Kuroir</div>
+                <div onclick="setEditorTheme('solarized_light');">Solarized Light</div>
+                <div onclick="setEditorTheme('solarized_dark');">Solarized Dark</div>
+                <div onclick="setEditorTheme('xcode');">XCode</div>
+                <div onclick="setEditorTheme('ambiance');">Ambiance</div>
+                <div onclick="setEditorTheme('cobalt');">Cobalt</div>
+                <div onclick="setEditorTheme('idle_fingers');">idle Fingers</div>
+                <div onclick="setEditorTheme('kr_theme');">krTheme</div>
+                <div onclick="setEditorTheme('mono_industrial');">Mono Industrial</div>
+                <div onclick="setEditorTheme('monokai');">Monokai</div>
+                <div onclick="setEditorTheme('terminal');">Terminal</div>
+                <div onclick="setEditorTheme('textmate');">Textmate</div>
+                <div onclick="setEditorTheme('tomorrow');">Tomorrow</div>
+                <div onclick="setEditorTheme('twilight');">Twilight</div>
+                <div onclick="setEditorTheme('vibrant_ink');">Vibrant Ink</div>
+            </div>
+   </div>
+   <div id="font-size" data-options="iconCls:'icon-font-size'"><span>Font Size</span>
+            <div>
+                <div onclick="setEditorFontSize('8');">8px</div>
+                <div onclick="setEditorFontSize('9');">9px</div>
+                <div onclick="setEditorFontSize('10');">10px</div>
+                <div onclick="setEditorFontSize('11');">11px</div>
+                <div onclick="setEditorFontSize('12');">12px</div>
+                <div onclick="setEditorFontSize('13');">13px</div>
+                <div onclick="setEditorFontSize('14');">14px</div>
+                <div onclick="setEditorFontSize('15');">15px</div>
+                <div onclick="setEditorFontSize('16');">16px</div>
+                <div onclick="setEditorFontSize('17');">17px</div>
+                <div onclick="setEditorFontSize('18');">18px</div>
+                <div onclick="setEditorFontSize('20');">20px</div>
+                <div onclick="setEditorFontSize('22');">22px</div>
+                <div onclick="setEditorFontSize('24');">24px</div>
+            </div>
+   </div>
+   <div id="tab-size" data-options="iconCls:'icon-tab-size'"><span>Tab Size</span>
+            <div>
+                <div onclick="setEditorTabSize('1');">1</div>
+                <div onclick="setEditorTabSize('2');">2</div>
+                <div onclick="setEditorTabSize('3');">3</div>
+                <div onclick="setEditorTabSize('4');">4</div>
+                <div onclick="setEditorTabSize('5');">5</div>
+                <div onclick="setEditorTabSize('6');">6</div>
+                <div onclick="setEditorTabSize('7');">7</div>
+                <div onclick="setEditorTabSize('8');">8</div>
+            </div>
+   </div>
+   <div id="soft-wrap" data-options="iconCls:'icon-soft-wrap'"><span>Soft Wrap</span>
+            <div>
+                <div onclick="setEditorSoftWrap('true');">On</div>
+                <div onclick="setEditorSoftWrap('false');">Off</div>
+                <div onclick="setEditorSoftWrap('40');">40 Chars</div>
+                <div onclick="setEditorSoftWrap('60');">60 Chars</div>
+                <div onclick="setEditorSoftWrap('80');">80 Chars</div>
+                <div onclick="setEditorSoftWrap('100');">100 Chars</div>
+                <div onclick="setEditorSoftWrap('120');">120 Chars</div>
+                <div onclick="setEditorSoftWrap('140');">140 Chars</div>
+            </div>
+   </div>
+   <div class="menu-sep"></div>
+   <div onclick="setEditorInvisible(true);"  data-options="iconCls:'icon-show-invisible'">Show Invisible</div>
+   <div onclick="setEditorInvisible(false);" data-options="iconCls:'icon-hide-invisible'">Hide Invisible</div>
+   <div class="menu-sep"></div>
+   <div onclick="setEditorGutter(true);" data-options="iconCls:'icon-show-gutter'">Show Gutter</div>
+   <div onclick="setEditorGutter(false);" data-options="iconCls:'icon-hide-gutter'">Hide Gutter</div>
+</div>
+<div id="mm4" style="width:200px;">
+     <div onclick="switchTerminal();" id="create-project" data-options="iconCls:'icon-create-project'">Create Project</div>
+     <div onclick="refreshProject();" data-options="iconCls:'icon-refresh-project'">Refresh Project</div>
+     <div onclick="renameProject();" data-options="iconCls:'icon-rename-file'">Rename Project</div>
+     <div class="menu-sep"></div>
+     <div data-options="iconCls:'icon-save-project'"><span>Save Project</span>
+       <div>
+           <div onclick="saveAtDropbox()" data-options="iconCls:'icon-dropbox'">Save at Dropbox</div>
+           <div onclick="saveAtGoogleDrive()" data-options="iconCls:'icon-google-drive'">Save at Google Drive</div>
+           <div onclick="saveAtOneDrive()" data-options="iconCls:'icon-one-drive'">Save at OneDrive</div>
+       </div>
+     </div>
+     <div data-options="iconCls:'icon-export-project'"><span>Import Project</span>
+        <div>
+          <div onclick="listDropboxProjects()"  data-options="iconCls:'icon-dropbox'">Import Project from Dropbox</div>
+          <div onclick="listGoogleDriveProjects()" data-options="iconCls:'icon-google-drive'">Import Project from Google Drive</div>
+          <div onclick="listOneDriveProjects()" data-options="iconCls:'icon-one-drive'">Import Project from OneDrive</div>
+        </div>
+     </div>
+     <div data-options="iconCls:'icon-delete-file'"><span>Delete Project</span>
+        <div>
+          <div onclick="listDropboxProjects()"  data-options="iconCls:'icon-dropbox'">Delete Project from Dropbox</div>
+          <div onclick="listGoogleDriveProjects()" data-options="iconCls:'icon-google-drive'">Delete Project from Google Drive</div>
+          <div onclick="listOneDriveProjects()" data-options="iconCls:'icon-one-drive'">Delete Project from OneDrive</div>
+        </div>
+     </div>
+     <div class="menu-sep"></div>
+     <div onclick="downloadProject()" data-options="iconCls:'icon-download-file'">Download Project</div>
+     <div onclick="openUploadProject()"  data-options="iconCls:'icon-upload-file'">Upload Project</div>
+     <div class="menu-sep"></div>
+     <div onclick="openShareProject()" data-options="iconCls:'icon-share-project'">Share Project</div>
+     <div class="menu-sep"></div>
+     <div onclick="openCompileOptions()" data-options="iconCls:'icon-execute-project'">Compile Options</div>
+</div>
+</div><!--HEADER ENDS -->
+<div data-options="region:'south'" style="height:1px;"><!--FOOTER STARTS -->
+</div><!--FOOTER ENDS -->
+<div id="east" data-options="region:'east',title:'Terminal', tools:'#terminal-tools', iconCls:'icon-terminal', split:true" style="width:50%;"><!--TERMINAL STARTS -->
+   <div id="hterminal" style="padding:0px; margin:0px;">
+      <div id="terminal" style="padding:0px; margin:0px;">
+   </div>
+</div>
+</div><!--TERMINAL ENDS -->
+<div id="spectrum-tools" style="position_relative;">
+  <input type='text' id="spectrum" />
+</div>
+<div id="terminal-tools" style="position_relative;">
+   <a href="#" onclick="setTerminalMode('H')" class='icon-h-terminal'></a>
+   <a href="#" onclick="setTerminalMode('V')" class='icon-v-terminal'></a>
+   <a href="#" onclick="setSpectrum()" class='icon-color'></a>
+</div>
+<div data-options="region:'west',onCollapse:doVertical, title:'Project',iconCls:'icon-project', split:true, tools: [{iconCls:'icon-refresh-project', handler:function(){reloadTree()}},{ iconCls:'icon-save-project', handler:function(){saveFiles(function(status){})}}, { iconCls:'icon-delete-file', handler:function(){deleteFile()} }, { iconCls:'icon-add-file', handler:function(){newFile()} }]" style="width:250px;">
+<ul id="home" class="easyui-tree" data-options="method:'GET', animate:true,lines:true">
+<div id='treewait'>
+<img style="margin-left:4px;margin-top:3px;width:28px; height:28px;" src='/images/loading.gif'/>
+</div>
+</ul>
+</div>
+<div data-options="region:'center'" style="padding:0px;background:#eee;"><!--CODE AREA STARTS -->
+<div data-options="fit:true,border:false,tools:'#tab-tools',toolPosition:'left'" id="codebox" class="easyui-tabs" style="width:55%;">
+</div>
+<div id="tab-tools" style="border-top:0px; border-right:0px;">
+<div id='wait' style='display:none'>
+<img style="margin-left:4px;margin-top:3px;width:28px; height:28px;" src='/images/loading.gif'/>
+</div>
+<a href="javascript:void(0)" id="compile"  class="easyui-linkbutton" data-options="plain:true,iconCls:'icon-execute-project'" target="view" style="white-space:nowrap;"><b>Compile</b></a>
+<a href="javascript:void(0)" class="easyui-linkbutton" data-options="plain:true" target="view" style="white-space:nowrap;"><b>|</b></a>
+<a href="javascript:void(0)" id="execute"  class="easyui-linkbutton" data-options="plain:true" target="view" style="white-space:nowrap;"><b>Execute</b></a></div>
+</div>
+</div><!--CODE AREA STARTS -->
+<script>
+$(function(){
+   var nodeid;
+   var nodetext;
+   var nodetype;
+   $('#home').tree({
+      url:'load_tree',
+      loadFilter: function(data){
+        return data;
+      },
+      onContextMenu:function( e, node ){
+         e.preventDefault();
+         // select the node
+         $('#home').tree('select', node.target);
+         // display context menu
+         if( node.type === "F" ){
+            $('#filecontext').menu('show', {
+               left: e.pageX,
+               top: e.pageY
+            });
+         }else if( node.type === "D" ){
+            $('#dircontext').menu('show', {
+               left: e.pageX,
+               top: e.pageY
+            });
+         }
+      },
+      onExpand:function(node){
+         $(this).tree('select', node.target);
+      },
+      onCollapse:function(node){
+         $(this).tree('select', node.target);
+      },
+      onDblClick:function(node){
+         loadFile( node, false );
+      },
+      onBeforeEdit:function(node){
+         nodeid = node.id;
+         nodetext = node.text;
+         nodetype = node.type;
+      },
+      onAfterEdit:function(node){
+         if( !( node.text.length) && nodetype === "F" ) {
+             $.messager.alert('Message', 'File name can\'t be null', 'info');
+             $('#home').tree('update', {
+		target: node.target,
+		text: nodetext
+	     });
+             return false;
+         }else if( !( node.text.length ) && nodetype === "D" ) {
+             $.messager.alert('Message', 'Directory name can\'t be null', 'info');
+             $('#home').tree('update', {
+		target: node.target,
+		text: nodetext
+	     });
+             return false;
+         }
+         var index = node.id.lastIndexOf("/");
+         var cwd = node.id.substring(0, index);
+         var newid = cwd + "/" + node.text;
+         // Duplicate check
+         var father = $('#home').tree('getParent', node.target );
+         var children = $('#home').tree('getChildren', father.target );
+         var retVal = true;
+         $.each(children, function( i, n) {
+            if( newid === n.id && nodeid !== newid ){
+                alert("A file with the same name already exists!");
+                $.messager.alert('Message', 'A file with the same name already exists!', 'info');
+                retVal = false;
+                return false;
+            }
+         });
+         if( !retVal ) {
+           $('#wait').hide();
+           $('#home').tree('update', {
+                target: node.target,
+		text: nodetext
+            });
+            return false;
+         }
+          // Make Ajax call to rename file/directory
+          var url = "rename_file";
+          var inputs = JSON.stringify({ "cwd": cwd, "oldnode": nodetext, "newnode": node.text});
+          $.ajax({
+               type: "POST",
+               url: url,
+               data: inputs,
+               contentType: 'application/json; charset=utf-8',
+               dataType: 'json',
+               beforeSend: function(  ) {
+                    $("#loading").css({"visibility":"visible"});
+               },
+               success: function(data)
+               {
+                   if( data.status ){
+                      $.messager.alert('Error Message', data.message, 'error');
+                      $('#home').tree('update', {
+                          target: node.target,
+                          text: nodetext
+                      });
+                   }else{
+                      $('#home').tree('update', {
+                          target: node.target,
+                          id: newid
+                      });
+                      node.id = newid;
+                      refreshTab( cwd, nodetext, node.text, data.mode );
+                   }
+                   $("#loading").css({"visibility":"hidden"});
+               }
+          });
+      },
+      onBeforeLoad:function(node, param){
+         //$("#loading").css({"visibility":"show"});
+         $("#treewait").show();
+      },
+      onLoadSuccess:function(node, data){
+         //$("#loading").css({"visibility":"hidden"});
+         $("#treewait").hide();
+      }
+   }); 
+});
+$(function(){
+   $('#codebox').tabs({
+      onLoad:function(panel){
+/*
+         var root = $("#root").val();
+         var ext = $("#ext").val();
+         var mainid = root + "/main." + ext;
+         editors[mainid] = new ace.edit(mainid);
+         editors[mainid].setTheme("ace/theme/crimson_editor");
+         editors[mainid].getSession().setMode("ace/mode/c_cpp");
+         editors[mainid].getSession().setUseWrapMode(true);
+*/
+      },
+      onBeforeClose: function(title,index){
+         if( deleting ){
+              // simply return back
+              return true;
+         }
+         var target = this;
+         var tab = $(target).tabs('getTab',index);
+         var tabid = tab.panel('options').id;
+         if( editors[tabid] ){
+            if( !editors[tabid].getSession().getUndoManager().isClean() ){
+               $.messager.defaults.ok = "Save";
+               $.messager.defaults.cancel = "No";
+               $.messager.confirm('Confirmation','Do you want to save your changes for the file '+title,function(r){
+                  if (r){
+                      saveFiles( function( status ){
+                         var opts = $(target).tabs('options');
+                         var bc = opts.onBeforeClose;
+                         opts.onBeforeClose = function(){};
+                         $(target).tabs('close',index);
+                         opts.onBeforeClose = bc;
+                       });
+                  }else{
+                      var opts = $(target).tabs('options');
+                      var bc = opts.onBeforeClose;
+                      opts.onBeforeClose = function(){};
+                      $(target).tabs('close',index);
+                      opts.onBeforeClose = bc;
+                  }
+               });
+            }else{
+               var opts = $(target).tabs('options');
+               var bc = opts.onBeforeClose;
+               opts.onBeforeClose = function(){};
+               $(target).tabs('close',index);
+               opts.onBeforeClose = bc;
+            }
+         }else{
+               var opts = $(target).tabs('options');
+               var bc = opts.onBeforeClose;
+               opts.onBeforeClose = function(){};
+               $(target).tabs('close',index);
+               opts.onBeforeClose = bc;
+         }
+         //return false;	// prevent from closing
+     }
+  });
+});
+// Edit functionlaity starts here
+$('#undo').click( function(){
+    // Get active tab.
+    var tab = $('#codebox').tabs('getSelected');
+    var tabid = tab.panel('options').id;
+    if( editors[tabid].getSession().getUndoManager().hasUndo() ){
+        editors[tabid].getSession().getUndoManager().undo( false );
+    }
+});
+$('#redo').click( function(){
+    // Get active tab.
+    var tab = $('#codebox').tabs('getSelected');
+    var tabid = tab.panel('options').id;
+    if( editors[tabid].getSession().getUndoManager().hasRedo() ){
+        editors[tabid].getSession().getUndoManager().redo( false );
+    }
+});
+var clipboard;
+$('#cut').click( function(){
+    // Get active tab.
+    var tab = $('#codebox').tabs('getSelected');
+    var tabid = tab.panel('options').id;
+    var selectedRange = editors[tabid].getSelectionRange();
+    if( editors[tabid].getSession().getTextRange(selectedRange) ){
+       clipboard = editors[tabid].getSession().getTextRange(selectedRange);
+       editors[tabid].getSession().remove(selectedRange);
+    }
+});
+$('#delete').click( function(){
+    // Get active tab.
+    var tab = $('#codebox').tabs('getSelected');
+    var tabid = tab.panel('options').id;
+    var selectedRange = editors[tabid].getSelectionRange();
+    if( editors[tabid].getSession().getTextRange(selectedRange) ){
+       editors[tabid].getSession().remove(selectedRange);
+    }
+});
+$('#copy').click( function(){
+    // Get active tab.
+    var tab = $('#codebox').tabs('getSelected');
+    var tabid = tab.panel('options').id;
+    var selectedRange = editors[tabid].getSelectionRange();
+    if( editors[tabid].getSession().getTextRange(selectedRange) ){
+       clipboard = editors[tabid].getSession().getTextRange(selectedRange);
+    }
+});
+$('#paste').click( function(){
+    // Get active tab.
+    var tab = $('#codebox').tabs('getSelected');
+    var tabid = tab.panel('options').id;
+    var position = editors[tabid].getCursorPosition();
+    editors[tabid].getSession().insert(position, clipboard);
+});
+$('#select').click( function(){
+    // Get active tab.
+    var tab = $('#codebox').tabs('getSelected');
+    var tabid = tab.panel('options').id;
+    editors[tabid].getSelection().selectAll();
+});
+$('#find').click( function(){
+    // Get active tab.
+    var tab = $('#codebox').tabs('getSelected');
+    var tabid = tab.panel('options').id;
+    editors[tabid].execCommand("find");
+});
+$('#findreplace').click( function(){
+    // Get active tab.
+    var tab = $('#codebox').tabs('getSelected');
+    var tabid = tab.panel('options').id;
+    editors[tabid].execCommand("replace");
+});
+////////
+function openFileUpload(){
+    var selected = $('#home').tree('getSelected');
+    if( selected ){
+        if( selected.type !== 'D' ){
+           $.messager.alert('Alert Message','Select a directory where file will be uploaded', 'info');
+           return false;
+        }
+    }else{
+        $.messager.alert('Alert Message','Select a directory where file will be uploaded', 'info');
+        return false;
+    }
+    $win = $('#sign').window({title:'Upload File', iconCls:'icon-upload-file', width:'650', height:'375'});
+    $win.window('open');
+    $('#sign').window('refresh', 'upload-file.htm');
+}
+function openShareProject(){
+    saveFiles( function( status ){ return true; });
+    $win = $('#sign').window({title:'Share Project', iconCls:'icon-share-project', width:'675', height:'460'});
+    $win.window('open');
+    $('#sign').window('refresh', 'share-project.htm');
+}
+function openLogin(){
+    $win = $('#sign').window({title:'User Login', iconCls:'icon-login', width:'550', height:'400'});
+    $win.window('open');
+    $('#sign').window('refresh', 'login.htm');
+}
+function closeSign(){
+    $('#sign').window('close');
+    $win = null;
+}
+function openUploadProject(){
+    $win = $('#sign').window({title:'Upload project', iconCls:'icon-upload-file', width:'650', height:'435'});
+    $win.window('open');
+    $('#sign').window('refresh', 'upload-project.htm');
+}
+function openCompileOptions(){
+    $win = $('#sign').window({title:'Compilation Options', iconCls:'icon-execute-project', width:'550', height:'350'});
+    $win.window('open');
+    $('#sign').window('refresh', 'compile-options.htm');
+}
+function saveAtDropbox(){
+    openWindow( "save_at_dropbox", "Save Project", 700, 500 );
+}
+function saveAtBox(){
+    openWindow( "save_at_box", "Save Project", 700, 500 );
+}
+function saveAtGoogleDrive(){
+    openWindow( "save_at_googledrive", "Save Project", 700, 500 );
+}
+function saveAtOneDrive(){
+    openWindow( "save_at_onedrive", "Save Project", 700, 500 );
+}
+function listDropboxProjects(){
+    openWindow( "list_dropbox_projects", "Import Project", 700, 500 );
+}
+function listBoxProjects(){
+    openWindow( "list_box_projects", "Import Project", 700, 500 );
+}
+function listOneDriveProjects(){
+    openWindow( "list_onedrive_projects", "Import Project", 700, 500 );
+}
+function listGoogleDriveProjects(){
+    openWindow( "list_googledrive_projects", "Import Project", 700, 500 );
+}
+function refreshProject(){
+    window.onbeforeunload = null;
+    $("#loading").css({"visibility":"visible"});
+    location.reload();
+}
+function renameProject(){
+    $.messager.prompt('Change Project title', 'Enter your project title:' , function(title){
+       if (title){
+           if(/^[a-zA-Z0-9- ]*$/.test(title) == false) {
+               $.messager.alert('Alert Message','Project title should be plain text', 'info');
+               return false;
+           }else if(title.length > 25 ) {
+               $.messager.alert('Alert Message','Project title should be less than 25 characters', 'info');
+               return false;
+           }else{
+               projecttitle = title;
+               setProjectTitle( title );
+               // Make Ajax call to rename project at server
+               var url = "rename_project";
+               var inputs = JSON.stringify({"projecttitle":title});
+               $.ajax({
+                    type: "POST",
+                    url: url,
+                    data: inputs,
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    beforeSend: function(  ) {
+                          $("#loading").css({"visibility":"visible"});
+                    },
+                    success: function(data)
+                    {
+                         if( data.status ){
+                                $.messager.alert('Error Message', data.message, 'error');
+                          }else{
+                                $.messager.alert('Alert Message', data.message, 'info');
+                          }
+                         $("#loading").css({"visibility":"hidden"});
+                    }
+              });
+           }
+       }
+    });
+}
+function setCookie(cname, cvalue) {
+    var d = new Date();
+    d.setTime(d.getTime() + (10 * 365 * 24 * 60 * 60));
+    var expires = "expires="+d.toUTCString();
+    document.cookie = cname + "=" + cvalue + "; " + expires;
+}
+function getCookie(cname) {
+    var cookies = document.cookie.split("; ");
+    for(var i = 0; i < cookies.length; i++) {
+        var cookie = cookies[i].split("=");
+        if( cookie[0] === cname ){
+            return unescape(cookie[1]);
+        }
+    }
+    return null;
+}
+function shutDown() {
+  $.messager.defaults.ok = "Yes";
+  $.messager.defaults.cancel = "No";
+  $.messager.confirm('Confirmation','Do you really want to shut down the system?', function(r){
+  if (r){
+    // Make Ajax call to redirect to dropbox
+     var url = "shut_down";
+     var inputs = JSON.stringify({"helo":"bye"});
+     $.ajax({
+          type: "GET",
+          url: url,
+          data: inputs,
+          contentType: 'application/json; charset=utf-8',
+          dataType: 'json',
+          beforeSend: function(  ) {
+                $("#loading").css({"visibility":"visible"});
+          },
+          success: function(data)
+          {
+               $("#loading").css({"visibility":"hidden"});
+               if( !data.status ){
+                    $.messager.defaults.ok = "Ok";
+                    $.messager.alert('Message', data.message, 'Info', function(r){
+                         window.onbeforeunload = null;
+                         window.location = HOME;
+                    });
+               }
+          }
+    });
+  }
+  });
+}
+function openWindow(url, title, width, height) {
+    var leftPosition, topPosition;
+    //Allow for borders.
+    leftPosition = (window.screen.width / 2) - ((width / 2) + 10);
+    //Allow for title and status bars.
+    topPosition = (window.screen.height / 2) - ((height / 2) + 50);
+    //Open the window.
+    window.open(url, title, "status=no,height=" + height + ",width=" + width + ",resizable=yes,left=" + leftPosition + ",top=" + topPosition + ",screenX=" + leftPosition + ",screenY=" + topPosition + ",toolbar=no,menubar=no,scrollbars=yes,location=no,directories=no");
+}
+
+function save_at_dropbox(){
+     var  title = $('#projecttitle').val();
+     if( !title ){
+        $.messager.alert('Alert Message','Enter a short project title', 'info');
+        return false;
+     }
+     // Make Ajax call to redirect to dropbox 
+     var url = "dropbox_login";
+     var inputs = JSON.stringify({"title":title});
+     $.ajax({
+          type: "GET",
+          url: url,
+          data: inputs,
+          contentType: 'application/json; charset=utf-8',
+          dataType: 'json',
+          beforeSend: function(  ) {
+                $("#gitloading").css({"visibility":"visible"});
+          },
+          success: function(data)
+          {
+               if( data.status ){
+                      $.messager.alert('Error Message', data.message, 'error');
+                }else{
+                      $.messager.alert('Alert Message', data.message, 'info');
+                }
+                $("#gitloading").css({"visibility":"hidden"});
+          }
+    });
+}
+function downloadFile(){
+    var selected = $('#home').tree('getSelected');
+    if( !selected && selected.type !== 'F' ){
+        $.messager.alert('Alert Message','Select a file to be downloaded', 'info');
+        return false;
+    }
+    var index = selected.id.lastIndexOf("/");
+    var cwd = selected.id.substring(0, index);
+    var filename = selected.id.substring(index+1, selected.id.length);
+    var url = "/download_file" + "?cwd=" + cwd + "&file=" + filename;
+    $('#download').attr('src', url);
+}
+$('#download').load(function(){
+    var response = $('#download').contents().find("html").text();
+    $("#loading").css({"visibility":"hidden"});
+    if( response ){
+       $.messager.alert('Alert Message',response, 'info');
+    }
+    return;
+});
+function downloadProject(){
+    saveFiles( function( status ){ return true; });
+    var url = "/download_project";
+    $('#download').attr('src', url);
+}
+function reloadTree(){
+   projecttitle = getProjectTitle();
+   $('#home').tree('reload');
+}
+function reloadTreeWB(){
+   projecttitle = getProjectTitle();
+   $('#home').tree({
+      url:'load_tree_wb'
+   });
+}
+function getTabTitle( cwd, filename ){
+   var tabid = cwd + "/" + filename ;
+
+   var rootlen = root.length;
+   var cwdlen = tabid.length;
+   var tabtitle = tabid.substring(rootlen+1, cwdlen);
+    
+   return tabtitle;
+}
+function addNewTab(cwd, filename, ifNew, mode){
+   var tabid = cwd + "/" + filename ;
+   var tabtitle = getTabTitle ( cwd, filename );
+
+   if ($('#codebox').tabs('exists', tabtitle)){
+      $('#codebox').tabs('select', tabtitle);
+      return true;
+   } else {
+      var content;
+      if ( ifNew ) {
+          $('#codebox').tabs('add',{
+             title:tabtitle,
+             id:tabid,
+             closable:true,
+             href:'load_file',
+             extractor:function(data){
+                return data;
+             },
+             onLoad: function( panel ){
+                 editors[tabid] = new ace.edit(tabid);
+                 editors[tabid].setTheme("ace/theme/" + editor_theme);
+                 editors[tabid].setFontSize(editor_font_size);
+                 editors[tabid].getSession().setTabSize(editor_tab_size);
+                 editors[tabid].getSession().setMode("ace/mode/" + mode);
+                 editors[tabid].setShowInvisibles(editor_invisible);
+                 editors[tabid].renderer.setShowGutter(editor_gutter);
+                 if( editor_type === "vim" ){
+                      editors[tabid].setKeyboardHandler(require("ace/keyboard/vim").handler);
+                 }else if( editor_type === "emacs" ){
+                      editors[tabid].setKeyboardHandler(require("ace/keyboard/emacs").handler);
+                 }else{
+                      editors[tabid].setKeyboardHandler(null);
+                 }
+                 if( editor_soft_wrap === "true" ){
+                     editors[tabid].getSession().setUseWrapMode(true);
+                  }else if (editor_soft_wrap === "false" ){
+                     editors[tabid].getSession().setUseWrapMode(false);
+                 }else{
+                     editors[tabid].getSession().setUseWrapMode(true);
+                     editors[tabid].getSession().setWrapLimitRange(parseInt(editor_soft_wrap), parseInt(editor_soft_wrap));
+                 }
+                 editors[tabid].resize( true );
+                 editors[tabid].focus();
+             }
+          });
+      }else{
+          $('#codebox').tabs('add',{
+             title:tabtitle,
+             id:tabid,
+             closable:true,
+             href:'load_file?id=' + tabid,
+             extractor:function(data){
+                return data;
+             },
+             onLoad: function( panel ){
+                 editors[tabid] = new ace.edit(tabid);
+                 editors[tabid].setTheme("ace/theme/" + editor_theme);
+                 editors[tabid].setFontSize(editor_font_size);
+                 editors[tabid].getSession().setTabSize(editor_tab_size);
+                 editors[tabid].getSession().setMode("ace/mode/" + mode);
+                 editors[tabid].setShowInvisibles(editor_invisible);
+                 editors[tabid].renderer.setShowGutter(editor_gutter);
+                 if( editor_type === "vim" ){
+                      editors[tabid].setKeyboardHandler(require("ace/keyboard/vim").handler);
+                 }else if( editor_type === "emacs" ){
+                      editors[tabid].setKeyboardHandler(require("ace/keyboard/emacs").handler);
+                 }else{
+                      editors[tabid].setKeyboardHandler(null);
+                 }
+                 if( editor_soft_wrap === "true" ){
+                     editors[tabid].getSession().setUseWrapMode(true);
+                  }else if (editor_soft_wrap === "false" ){
+                     editors[tabid].getSession().setUseWrapMode(false);
+                 }else{
+                     editors[tabid].getSession().setUseWrapMode(true);
+                     editors[tabid].getSession().setWrapLimitRange(parseInt(editor_soft_wrap), parseInt(editor_soft_wrap));
+                 }
+                 editors[tabid].resize( true );
+                 editors[tabid].focus();
+             }
+          });
+      }
+   }
+   return true;
+}
+function addNewGoogleTab(cwd, filename, ifNew){
+   var tabid = cwd + "/" + filename ;
+   var tabtitle = getTabTitle ( cwd, filename );
+
+   if ($('#codebox').tabs('exists', tabtitle)){
+      $('#codebox').tabs('select', tabtitle);
+      return true;
+   } else {
+      var content;
+      // Get width & height of document space.
+      var url = "http://www.amrood.com" + ':' + port + tabid;
+      $('#codebox').tabs('add',{
+             title:tabtitle,
+             id:tabid,
+             closable:true,
+             href:'load_file',
+             extractor:function(data){
+                return '<iframe width="100%" height="100%" src="http://docs.google.com/viewer?url=' + url + '&amp;embedded=true"  frameborder="0"></iframe>';
+             }
+          });
+   }
+   return true;
+}
+function addNewImageTab(cwd, filename, ifNew){
+   var tabid = cwd + "/" + filename ;
+   var tabtitle = getTabTitle ( cwd, filename );
+
+   if ($('#codebox').tabs('exists', tabtitle)){
+      $('#codebox').tabs('select', tabtitle);
+      return true;
+   } else {
+      var content;
+      // Get width & height of document space.
+      var codebox_w = $('#codebox').width();
+      var codebox_h = $('#codebox').height();
+      var url = "http://www.amrood.com" + ':' + port + tabid;
+      $('#codebox').tabs('add',{
+             title:tabtitle,
+             id:tabid,
+             closable:true,
+             href:'load_file',
+             extractor:function(data){
+                return '<iframe width="100%" height="100%" src=\"' + url + '\" frameborder="0"></iframe>';
+             }
+          });
+   }
+   return true;
+}
+function refreshTab( cwd, oldfilename, newfilename, mode){
+   var newid = cwd + "/" + newfilename;
+   var oldid = cwd + "/" + oldfilename;
+
+   var oldtabtitle = getTabTitle( cwd, oldfilename );
+   var newtabtitle = getTabTitle( cwd, newfilename );
+   if ($('#codebox').tabs('exists', oldtabtitle)){
+      var ctab = $('#codebox').tabs('getTab', oldtabtitle);
+      $('#codebox').tabs('update', {
+         tab : ctab, 
+         options: {
+             title:newtabtitle,
+             id:newid,
+             href:null
+          }
+      });
+      // Delete old editor.
+      delete editors[oldid];
+      editors[newid] = new ace.edit(newid);
+      editors[newid].setTheme("ace/theme/" + editor_theme);
+      editors[newid].setFontSize(editor_font_size);
+      editors[newid].getSession().setTabSize(editor_tab_size);
+      editors[newid].getSession().setMode("ace/mode/" + mode);
+      if( editor_type === "vim" ){
+           editors[newid].setKeyboardHandler(require("ace/keyboard/vim").handler);
+      }else if( editor_type === "emacs" ){
+           editors[newid].setKeyboardHandler(require("ace/keyboard/emacs").handler);
+      }else{
+           editors[newid].setKeyboardHandler(null);
+      }
+      if( editor_soft_wrap === "true" ){
+         editors[newid].getSession().setUseWrapMode(true);
+      }else if (editor_soft_wrap === "false" ){
+         editors[newid].getSession().setUseWrapMode(false);
+      }else{
+         editors[newid].getSession().setUseWrapMode(true);
+         editors[newid].getSession().setWrapLimitRange(parseInt(editor_soft_wrap), parseInt(editor_soft_wrap));
+      }
+      editors[newid].resize( true );
+      editors[newid].getSession().getUndoManager().dirtyCounter = 1;
+      editors[newid].focus();
+   }
+}
+function saveFiles( callback ){
+   var tobesaved = false;
+   // Though its overhead but check if something changed or not
+   for( var key in  editors ){
+       // Check if there is any change or not.
+       if( !editors[key].getSession().getUndoManager().isClean() ){
+            tobesaved = true;
+       }
+   }
+   if( !tobesaved ){
+       // There is nothing to be saved
+       callback( true );
+   }
+   for( var key in  editors ){
+       // Check if this was changed or not.
+       if( !editors[key].getSession().getUndoManager().isClean() ){
+           var filename =  key;
+           var content = editors[key].getValue();
+          // Make Ajax call to save file
+           var url = "save_file";
+           var inputs = JSON.stringify({ "file": filename, "content": content});
+           // Mark this content saved
+           editors[key].getSession().getUndoManager().markClean();
+           $.ajax({
+               type: "POST",
+               url: url,
+               data: inputs,
+               contentType: 'application/json; charset=utf-8',
+               dataType: 'json',
+               beforeSend: function(  ) {
+                  $("#loading").css({"visibility":"visible"});
+               },
+               success: function(data)
+               {
+                   if( data.status ){
+                      $.messager.alert('Error Message', data.message, 'error');
+                   }
+                   $("#loading").css({"visibility":"hidden"});
+                   callback( true );
+               }
+           });
+       }
+   }
+}
+function loadFile( node, bypass ){
+    if( !node ){
+       node = $('#home').tree('getSelected');
+    }
+    if( node.type === 'D' ){
+         return false;
+    }
+    var index = node.id.lastIndexOf("/");
+    var cwd = node.id.substring(0, index);
+    var filename = node.id.substring(index+1, node.id.length);
+    var inputs = JSON.stringify({ "cwd": cwd, "file": filename});
+    // Check its mime type first
+    var url = "get_mime_type";
+    $.ajax({
+         type: "POST",
+         url: url,
+         data: inputs,
+         contentType: 'application/json; charset=utf-8',
+         dataType: 'json',
+         beforeSend: function(  ) {
+              $("#loading").css({"visibility":"visible"});
+         },
+         success: function(data)
+         {
+             if( !data.status && data.loadable === 'T' && data.filetype === "text"){
+                addNewTab( cwd, node.text, false, data.mode);
+             }else if( !data.status && data.loadable === 'T' && data.filetype === "google"){
+                addNewGoogleTab( cwd, node.text, false);
+             }else if( !data.status && data.loadable === 'T' && data.filetype === "image"){
+                addNewImageTab( cwd, node.text, false);
+             }else if( !data.status && data.loadable === 'F' && !bypass ){
+                $.messager.defaults.ok = "Yes";
+                $.messager.defaults.cancel = "No";
+                $.messager.confirm('Confirmation','File does not look editable, still you want to open it?', function(r){
+                  if (r){
+                      addNewTab( cwd, node.text, false, data.mode);
+                   }
+                 });
+             }else if( data.status ){
+                $.messager.alert('Error Message', data.message, 'error');
+             }
+             $('#home').tree('update', {
+		target: node.target,
+		iconCls: data.icon
+	     });
+             $("#loading").css({"visibility":"hidden"});
+         }
+    });
+    return true;
+}
+var deleting = false;
+function deleteFile(){
+    var selected = $('#home').tree('getSelected');
+    if( !selected || selected.type === 'D' ){
+       $.messager.alert('Message', 'Select a file to be deleted', 'info' );
+       return false;
+    }
+    var index = selected.id.lastIndexOf("/");
+    var cwd = selected.id.substring(0, index);
+    var tabtitle = getTabTitle( cwd, selected.text );
+    var filename = selected.id.substring(index+1, selected.id.length);
+    $.messager.defaults.ok = "Yes";
+    $.messager.defaults.cancel = "No";
+    $.messager.confirm('Confirmation','Do you really want to delete file ' + tabtitle, function(r){
+       deleting = true;
+       if (r){
+          // Make Ajax call to delete file
+          var url = "delete_file";
+          var inputs = JSON.stringify({ "cwd": cwd, "file": filename});
+          $.ajax({
+               type: "POST",
+               url: url,
+               data: inputs,
+               contentType: 'application/json; charset=utf-8',
+               dataType: 'json',
+               beforeSend: function(  ) {
+                    $("#loading").css({"visibility":"visible"});
+               },
+               success: function(data)
+               {
+                   if( data.status ){
+                      $.messager.alert('Error Message', data.message, 'error');
+                   }else{
+                      // check if its opened in tab
+                      if ($('#codebox').tabs('exists', tabtitle)){
+                         var tab = $('#codebox').tabs('getTab', tabtitle);
+                         var index = $('#codebox').tabs('getTabIndex', tab);
+                         if( editors[selected.id] ){
+                             editors[selected.id].getSession().getUndoManager().markClean();
+                         }
+                         $('#codebox').tabs('close', index);
+                      }
+                      // remove node from the tree
+                      $('#home').tree( 'remove', selected.target );
+                   }
+                   $("#loading").css({"visibility":"hidden"});
+                   deleting = false;
+               }
+          });
+       }
+   });
+}
+function deleteDir(){
+    var selected = $('#home').tree('getSelected');
+    var title = selected.text;
+    if( !selected ){
+       $.messager.alert( "Select a file or directory to be deleted", "Info" );
+       return false;
+    }
+    var cwd = selected.id;
+    // Check if its empty directory or not
+    var children = $('#home').tree('getChildren', selected.target); 
+    if( children.length > 0  ) {
+        $.messager.alert('Message', title + ' directory is not empty','info');
+        return false;
+    }
+    $.messager.defaults.ok = "Yes";
+    $.messager.defaults.cancel = "No";
+    $.messager.confirm('Confirmation','Do you really want to delete directory ' + title, function(r){
+       if (r){
+          // Make Ajax call to delete file
+          var url = "delete_dir";
+          var inputs = JSON.stringify({ "cwd": cwd, "file": title});
+          var retVal = false;
+          $.ajax({
+               type: "POST",
+               url: url,
+               data: inputs,
+               contentType: 'application/json; charset=utf-8',
+               dataType: 'json',
+               beforeSend: function(  ) {
+                    $("#loading").css({"visibility":"visible"});
+               },
+               success: function(data)
+               {
+                   if( data.status ){
+                      $.messager.alert('Error Message', data.message, 'error');
+                   }else{
+                      $('#home').tree( 'remove', selected.target );
+                   }
+                  $("#loading").css({"visibility":"hidden"});
+               }
+          });
+       }
+   });
+}
+function renameFile(){
+   var selected = $('#home').tree('getSelected');
+   if( !selected ){
+        $.messager.alert('Alert Message','Select a file or directory to rename', 'info');
+        return false;
+   }
+   $('#home').tree('beginEdit', selected.target);
+   return true;
+}
+
+function newFile( ){
+   var selected = $('#home').tree('getSelected');
+   $('#wait').show();
+
+   if( !selected ){
+      var root = $('#home').tree('getRoot');
+      $('#home').tree('select', root.target);
+      selected = $('#home').tree('getSelected');
+   }
+   $('#home').tree('expand', selected.target);
+   // Directory validation
+   if( $('#home').tree('isLeaf', selected.target) && selected.type !== "D" ){
+      var father = $('#home').tree('getParent', selected.target );
+      $('#home').tree('select', father.target);
+       selected = $('#home').tree('getSelected');
+   }
+   // Duplicate check
+   var children = $('#home').tree('getChildren', selected.target );
+   var retVal = true;
+   var cwd = selected.id;
+   var filename = "Newfile." + ext;
+   var newfile = cwd + "/" + filename;
+   var count = 1;
+   while( retVal ) {
+       $.each(children, function( index, node) {
+          if( node.id === newfile ){
+             filename = "Newfile(" + count + ")." + ext;
+             newfile = cwd + "/" + filename;
+             retVal = false;
+             return false;
+          }
+      });
+      if( !retVal ) {
+        retVal = true;
+        count = count + 1;
+        continue;
+      }else{
+         $('#wait').hide();
+         break;
+      }
+   }
+   // Make Ajax call to create file
+   var url = "add_file";
+   var inputs = JSON.stringify({ "cwd": cwd, "file": filename});
+   $.ajax({
+        type: "POST",
+        url: url,
+        data: inputs,
+        contentType: 'application/json; charset=utf-8',
+        dataType: 'json',
+        beforeSend: function(  ) {
+             $("#loading").css({"visibility":"visible"});
+        },
+        success: function(data)
+        {
+            if( data.status ){
+               $.messager.alert('Error Message', data.message, 'error');
+            }else{
+               $('#home').tree('append', {
+                  parent: selected.target,
+                  data: [{
+                      id: newfile,
+                      type: 'F',
+                      text: filename
+                   }]
+               }); 
+               var node = $('#home').tree('find', newfile);
+               $('#home').tree('select', node.target);
+               addNewTab( cwd, filename, true, "text");
+           }
+           $("#loading").css({"visibility":"hidden"});
+        }
+   });
+}
+function newDir(){
+   var selected = $('#home').tree('getSelected');
+   $('#wait').show();
+
+   if( !selected ){
+      var root = $('#home').tree('getRoot');
+      $('#home').tree('select', root.target);
+      selected = $('#home').tree('getSelected');
+   }
+   $('#home').tree('expand', selected.target);
+   // Directory validation
+   if( $('#home').tree('isLeaf', selected.target) && selected.type !== "D" ){
+      var father = $('#home').tree('getParent', selected.target );
+      $('#home').tree('select', father.target);
+       selected = $('#home').tree('getSelected');
+   }
+   // Duplicate check
+   var children = $('#home').tree('getChildren', selected.target );
+   var retVal = true;
+   var cwd = selected.id;
+   var dirname = "Newfolder"
+   var newdir = cwd + "/" + dirname;
+   var count = 1;
+   while( retVal ) {
+       $.each(children, function( index, node) {
+          if( node.id === newdir ){
+             dirname = "Newfolder(" + count + ")";
+             newdir = cwd + "/" + dirname;
+             retVal = false;
+             return false;
+          }
+      });
+      if( !retVal ) {
+        retVal = true;
+        count = count + 1;
+        continue;
+      }else{
+         $('#wait').hide();
+         break;
+      }
+   }
+   // Make Ajax call to create directory
+   var url = "add_dir";
+   var inputs = JSON.stringify({ "cwd": cwd, "dir": dirname});
+   $.ajax({
+        type: "POST",
+        url: url,
+        data: inputs,
+        contentType: 'application/json; charset=utf-8',
+        dataType: 'json',
+        beforeSend: function(  ) {
+             $("#loading").css({"visibility":"visible"});
+        },
+        success: function(data)
+        {
+            if( data.status ){
+               $.messager.alert('Error Message', data.message, 'error');
+            }else{
+               $('#home').tree('append', {
+                  parent: selected.target,
+                  data: [{
+                      id: newdir,
+                      type: 'D',
+                      state:'open',
+                      children:[{length:0}],
+                      text: dirname
+                   }]
+               });
+               var node = $('#home').tree('find', newdir);
+               $('#home').tree('select', node.target);
+           }
+           $("#loading").css({"visibility":"hidden"});
+        }
+   });
+}
+function setEditorTheme( theme ){
+   editor_theme =  theme;
+   for( var key in  editors ){
+      editors[key].setTheme("ace/theme/" + editor_theme);
+   }
+   setCookie( "editor_theme", editor_theme );
+}
+function setEditorType( type ){
+   editor_type =  type;
+   var handler;
+   if( editor_type === "vim" ){
+        handler = require("ace/keyboard/vim").handler;
+   }
+   if( editor_type === "emacs" ){
+        handler = require("ace/keyboard/emacs").handler;
+   }
+   if( editor_type === "ace" ){
+        handler = null;
+   }
+   for( var key in  editors ){
+      editors[key].setKeyboardHandler(handler);
+   }
+   setCookie( "editor_type", editor_type );
+}
+function setEditorSoftWrap( mode ){
+   editor_soft_wrap = mode;
+   if( editor_soft_wrap === "true" ){
+      for( var key in  editors ){
+         editors[key].getSession().setUseWrapMode(true);
+      }
+    }else if (editor_soft_wrap === "false" ){
+      for( var key in  editors ){
+         editors[key].getSession().setUseWrapMode(false);
+      }
+   }else{
+      for( var key in  editors ){
+         editors[key].getSession().setUseWrapMode(true);
+         editors[key].getSession().setWrapLimitRange(parseInt(editor_soft_wrap), parseInt(editor_soft_wrap));
+      }
+   }
+   setCookie( "editor_soft_wrap", editor_soft_wrap );
+}
+function setEditorFontSize( size ){
+   editor_font_size = parseInt(size);
+   for( var key in  editors ){
+      editors[key].setFontSize(editor_font_size);
+   }
+   $('.terminal').css('font-size', editor_font_size );
+   terminal_color = getCookie( "terminal_color" );
+   $('.terminal').css('background-color', terminal_color);
+   if( term ){
+      term.resize( 80, 24 );
+      if( terminal_mode === "H" ){
+          $('#hterminal').css('background-color', terminal_color);
+          var termheight = ( document.getElementById('hterminal').clientHeight / term.element.offsetHeight )  * term.rows;
+          term.resize( 80, termheight );
+      }else{
+          $('#vterminal').css('background-color', terminal_color);
+          var termheight = ( document.getElementById('vterminal').clientHeight / term.element.offsetHeight )  * term.rows;
+          term.resize( 80, termheight );
+      }
+      term.emit( 'data', '\n' );
+      term.focus();
+   }
+   setCookie( "editor_font_size", size );
+}
+function setEditorTabSize( size ){
+   editor_tab_size = parseInt(size);
+   for( var key in  editors ){
+      editors[key].getSession().setTabSize(editor_tab_size);
+   }
+   setCookie( "editor_tab_size", size );
+}
+function setEditorInvisible( flag ){
+   editor_invisible = flag;
+   for( var key in  editors ){
+      editors[key].setShowInvisibles(flag);
+   }
+   setCookie( "editor_invisible", flag );
+}
+function setEditorGutter( flag ){
+   editor_gutter = flag;
+   for( var key in  editors ){
+      editors[key].renderer.setShowGutter(flag);
+   }
+   setCookie( "editor_gutter", flag );
+}
+
+function setProjectTitle( title ){
+    projecttitle = title;
+    var west = $('#cc').layout('panel', 'west');
+    west.panel('setTitle', projecttitle );
+}
+function getProjectTitle(){
+     // Make Ajax call to login this user.
+     var url = "get_project_title";
+     var inputs = JSON.stringify({'hello': 'bye'});
+     $.ajax({
+      type: "GET",
+      url: url,
+      data: inputs,
+      contentType: 'application/json; charset=utf-8',
+      dataType: 'json',
+      beforeSend: function(  ) {
+           $(".loading").css({"visibility":"visible"});
+      },
+      success:function(data)
+      {
+          projecttitle = data.projecttitle;
+          setProjectTitle( projecttitle );
+      }
+    });
+}
+function doVertical(){
+   var opts = $(this).panel('options');
+   var layout = $(this).closest('.layout');
+   var region = opts.region;
+   var p = layout.layout('panel', 'expand'+region.substr(0,1).toUpperCase()+region.substr(1));
+   var style = '';
+   if (region=='east'||region=='west'){
+   style = 'position:relative; top:5px; white-space:nowrap; font-size:14px; font-weight: bold;  transform:rotate(90deg);-ms-transform:rotate(90deg);-moz-transform:rotate(90deg);-webkit-transform:rotate(90deg);-o-transform:rotate(90deg);';
+   }
+   p.html('<div style="'+style+'">'+opts.title+'</div>');
+}
+function setSpectrum(){
+  $('#spectrum').spectrum('toggle');
+  var offset = $('.icon-color').offset();
+  $('.sp-container').css('top', offset.top + 25);
+  $('.sp-container').css('left', offset.left - 180);
+}
+function setTerminalMode( mode ){
+   $('#spectrum').spectrum('hide');
+   if( mode == terminal_mode ){
+       // Duplicate click.
+       return;
+   }
+   terminal_color = getCookie( "terminal_color" );
+   $('.terminal').css('background-color', terminal_color);
+   if( mode == "V" ){ 
+      $('#cc').layout('remove','south' );
+      $('#cc').layout('add',{
+       region: 'south',
+       height: '35%',
+       title: 'Terminal',
+       split: true,
+       iconCls: 'icon-terminal',
+       tools: [{iconCls:'icon-v-terminal', handler:function(){setTerminalMode('V')}}, 
+               {iconCls:'icon-h-terminal', handler:function(){setTerminalMode('H')}}, 
+               {iconCls:'icon-color', handler:function(){
+                     $('#spectrum').spectrum('toggle');
+                     var offset = $('.icon-color').offset();
+                     $('.sp-container').css('top', offset.top + 25);
+                     $('.sp-container').css('left', offset.left - 180);
+               }}],
+       href: 'vterminal.htm',
+       onLoad:function(){
+          $('#vterminal').html( $('#terminal') );
+          $('#vterminal').css('background-color', terminal_color);
+          $('#cc').layout('remove','east' );
+          $('#cc').layout('add', {region: 'east', width:'1', split:false});
+          if( term ){
+            term.resize( 80, 1 );
+            var termheight = ( document.getElementById('vterminal').clientHeight / term.element.offsetHeight )  * term.rows;
+            term.resize( 80, termheight );
+            term.emit( 'data', '\n' );
+            term.focus();
+          }
+          terminal_mode = mode;
+       }
+      });
+   }else if( mode == "H" ){
+      $('#cc').layout('remove','east' );
+      $('#cc').layout('add',{
+       region: 'east',
+       width: '50%',
+       title: 'Terminal',
+       split: true,
+       iconCls: 'icon-terminal',
+       tools: [{iconCls:'icon-v-terminal', handler:function(){setTerminalMode('V')}}, 
+               {iconCls:'icon-h-terminal', handler:function(){setTerminalMode('H')}}, 
+               {iconCls:'icon-color', handler:function(){
+                     $('#spectrum').spectrum('toggle');
+                     var offset = $('.icon-color').offset();
+                     $('.sp-container').css('top', offset.top + 25);
+                     $('.sp-container').css('left', offset.left - 180);
+               }}],
+       href: 'hterminal.htm',
+       onLoad:function(){
+          $('#hterminal').html( $('#terminal'));
+          $('#hterminal').css('background-color', terminal_color);
+          $('#cc').layout('remove','south' );
+          $('#cc').layout('add', {region: 'south', height:'1', split:false});
+          if( term ){
+            term.resize( 80, 1 );
+            var termheight = ( document.getElementById('hterminal').clientHeight / term.element.offsetHeight )  * term.rows;
+            term.resize( 80, termheight );
+            term.emit( 'data', '\n' );
+            term.focus();
+          }
+          terminal_mode = mode;
+       }
+      });
+   }
+}
+</script>
+<script src="/socket.io/socket.io.js"></script>
+<script src="term.js"></script>
+<script>
+$(document).ready(function() {
+  $('#spectrum').spectrum({
+    color: terminal_color,
+    showButtons: false,
+    move: function(color){
+        $('.terminal').css('background-color', color.toHexString());
+        setCookie( 'terminal_color', color.toHexString() );
+    }
+  });
+  $('#terminal-color').spectrum({
+    color: terminal_color,
+    showButtons: false,
+    move: function(color){
+        $('.terminal').css('background-color', color.toHexString());
+        setCookie( 'terminal_color', color.toHexString() );
+    }
+  });
+  $(window).bind('keydown', function(event) {
+    if (event.ctrlKey || event.metaKey) {
+        switch (String.fromCharCode(event.which).toLowerCase()) {
+        case 'd':
+            event.preventDefault();
+            alert('ctrl-D');
+            break;
+        case 's':
+            event.preventDefault();
+            alert('ctrl-s');
+            break;
+        case 'f':
+            event.preventDefault();
+            alert('ctrl-f');
+            break;
+        case 'g':
+            event.preventDefault();
+            alert('ctrl-g');
+            break;
+        }
+    }
+  });
+(function() {
+  if( $(window).width() <= 960 ){
+       setTerminalMode( "V");
+   }else{
+       setTerminalMode( "H");
+  }
+  window.onresize = function() {
+/*
+      term.resize( 80, 1 );
+      var termheight = ( document.getElementById('east').clientHeight / term.element.offsetHeight )  * term.rows;
+      term.resize( 80, termheight );
+*/
+  }
+  window.onload = function() {
+    $("#cc").css({opacity: 1.0, visibility: "visible"});
+    $("#loading").css({"visibility":"hidden"});
+    var socket = io.connect();
+    socket.on('connect', function() {
+      var fontsize = editor_font_size;
+      term = new Terminal({
+
+        cols: 80,
+        rows: 24,
+        useStyle: true,
+        screenKeys: true,
+        cursorBlink: true
+      });
+
+      socket.emit('data', '\n');
+      $("#cc").css({opacity: 1.0, visibility: "visible"});
+      $("#compile").click(function(){
+          saveFiles( function( status ){
+             command = "cmd-compile";
+             socket.emit('data', command+'\n');
+             term.focus();
+             return false;
+           });
+      });
+      $("#execute").click(function(){
+          command = "cmd-execute";
+          socket.emit('data', command+'\n');
+          term.focus();
+          return false;
+      });
+      term.on('data', function(data) {
+        socket.emit('data', data);
+      });
+      term.on('title', function(title) {
+        document.title = title;
+      });
+      $("#cc").layout('collapse','west');
+      terminal_color = getCookie( "terminal_color" );
+      term.open(document.getElementById("terminal"));
+      if( terminal_mode == 'H' ){
+         $('#hterminal').css('background-color', terminal_color);
+         var termheight = ( document.getElementById('east').clientHeight / term.element.offsetHeight )  * term.rows;
+         term.resize( 80, termheight );
+      }else{
+         $('#vterminal').css('background-color', terminal_color);
+         var termheight = ( document.getElementById('south').clientHeight / term.element.offsetHeight )  * term.rows;
+         term.resize( 132, termheight );
+      }
+      $('.terminal').css('background-color', terminal_color);
+      $('.terminal').css('font-size', editor_font_size);
+      socket.on('data', function(data) {
+         term.write(data);
+      });
+      socket.on('disconnect', function() {
+          term.destroy();
+      });
+    });
+  };
+}).call(this);
+});
+</script>
+</body>
+</html>
