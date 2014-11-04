@@ -1,0 +1,92 @@
+<div class="easyui-panel" id="compileoptions" style="width:100%">
+<div style="padding:10px 60px 20px 60px">
+<div id="message">
+<div style="text-align:center;padding:5px">
+<p><img src="/images/mini-logo.png"  style="width:60px; height:60px"/></p>
+</div>
+<form id="form" method="post" enctype="multipart/form-data">
+<table cellpadding="5" style="width:100%">
+<tr>
+<td>Compilation Command</td>
+<td><input class="easyui-textbox" value="" type="text" id="cmd_compile" style="width:300px"></input></td>
+</tr>
+<tr>
+<td>Execution Command</td>
+<td><input class="easyui-textbox" value="" type="text" id="cmd_execute" style="width:300px"></input></td>
+</tr>
+</table>
+<div style="text-align:center;padding:5px">
+<a href="javascript:void(0)" class="easyui-linkbutton" onclick="setCompileOptions()" style="width:60px"> Update </a>
+<a href="javascript:void(0)" class="easyui-linkbutton" onclick="closeSign()" style="width:60px"> Cancel </a>
+</div>
+<div class="central"><p><b>NOTE:</b> Kindly do not change these options if you are not well aware of them.</p></div>
+</div>
+</form>
+</div>
+<div id="loading" class="loading" style="visibility:hidden"></div>
+</div>
+<script>
+$(document).ready(function() {
+  var url = "get_compile_options";
+  var inputs = JSON.stringify({'hello': 'bye'});
+   $.ajax({
+      type: "GET",
+      url: url,
+      data: inputs,
+      contentType: 'application/json; charset=utf-8',
+      dataType: 'json',
+      beforeSend: function(  ) {
+           $(".loading").css({"visibility":"visible"});
+      },
+      success:function(data)
+      {
+           cmd_compile = data.cmd_compile;
+           cmd_execute = data.cmd_execute;
+           $('#cmd_compile').textbox('setText', data.cmd_compile );
+           $('#cmd_execute').textbox('setText', data.cmd_execute );
+           $(".loading").css({"visibility":"hidden"});
+      },
+      error:function(data)
+      {
+           cmd_compile = data.cmd_compile;
+           cmd_execute = data.cmd_execute;
+           $('#cmd_compile').val( data.cmd_compile );
+           $('#cmd_execute').val( data.cmd_execute );
+           $(".loading").css({"visibility":"hidden"});
+      }
+  });
+});
+function setCompileOptions(){
+   if( $('#cmd_compile').val() ){
+       cmd_compile = $('#cmd_compile').val();
+   }
+   if( $('#cmd_execute').val() ){
+      cmd_execute = $('#cmd_execute').val();
+   }
+
+   var url = "set_compile_options";
+   var inputs = JSON.stringify({'cmd_compile': cmd_compile, 'cmd_execute': cmd_execute});
+   $.ajax({
+      type: "POST",
+      url: url,
+      data: inputs,
+      contentType: 'application/json; charset=utf-8',
+      dataType: 'json',
+      beforeSend: function(  ) {
+           $(".loading").css({"visibility":"visible"});
+      },
+      success:function(data)
+      {
+           var text = data.responseText;
+           $('#message').html('<div>' + text + '</div>');
+           $(".loading").css({"visibility":"hidden"});
+      },
+      error:function(data)
+      {
+           var text = data.responseText;
+           $('#message').html('<div>' + text + '</div>');
+           $(".loading").css({"visibility":"hidden"});
+      }
+   });
+}
+</script>
